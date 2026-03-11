@@ -35,6 +35,12 @@ export const api = {
   // Classes
   getClasses: async () => snaps(await getDocs(classesRef())),
 
+  getClass: async (id) => {
+    const s = await getDoc(classRef(id));
+    if (!s.exists()) return null;
+    return { id: s.id, ...s.data() };
+  },
+
   createClass: async (name) => {
     const ref = await addDoc(classesRef(), { name });
     return { id: ref.id, name };
