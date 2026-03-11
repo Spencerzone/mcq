@@ -22,12 +22,11 @@ export default function ClassView() {
 
   async function load() {
     try {
-      const [classes, studs, tsts] = await Promise.all([
-        api.getClasses(),
+      const [found, studs, tsts] = await Promise.all([
+        api.getClass(classId),
         api.getStudents(classId),
         api.getTests(classId)
       ]);
-      const found = classes.find(c => c.id === classId);
       if (!found) { navigate('/'); return; }
       setCls(found);
       setStudents(studs);
