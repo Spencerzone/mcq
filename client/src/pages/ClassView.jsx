@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, studentDisplayName } from '../api.js';
 import StudentImport from '../components/StudentImport.jsx';
+import StudentProfile from '../components/StudentProfile.jsx';
 
 export default function ClassView() {
   const { classId } = useParams();
@@ -11,10 +12,13 @@ export default function ClassView() {
   const [tests, setTests] = useState([]);
   const [tab, setTab] = useState('students');
   const [showImport, setShowImport] = useState(false);
-  const [newStudentName, setNewStudentName] = useState('');
+  const [profileStudent, setProfileStudent] = useState(null);
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
   const [newStudentRef, setNewStudentRef] = useState('');
   const [newTestName, setNewTestName] = useState('');
   const [newTestQ, setNewTestQ] = useState(10);
+  const [sort, setSort] = useState({ col: 'last_name', dir: 'asc' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -38,13 +42,37 @@ export default function ClassView() {
     }
   }
 
+  // Sorted students
+  function sortValue(s, col) {
+    if (col === 'first_name') return (s.first_name || s.name || '').toLowerCase();
+    if (col === 'last_name') return (s.last_name || '').toLowerCase();
+    if (col === 'student_ref') return (s.student_ref || '').toLowerCase();
+    return '';
+  }
+  const sortedStudents = [...students].sort((a, b) => {
+    const av = sortValue(a, sort.col), bv = sortValue(b, sort.col);
+    return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+
+  function toggleSort(col) {
+    setSort(prev => prev.col === col
+      ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { col, dir: 'asc' });
+  }
+
+  function SortIcon({ col }) {
+    if (sort.col !== col) return <span style={{ color: '#d1d5db', marginLeft: 4 }}>↕</span>;
+    return <span style={{ color: '#4f46e5', marginLeft: 4 }}>{sort.dir === 'asc' ? '↑' : '↓'}</span>;
+  }
+
   async function addStudent(e) {
     e.preventDefault();
-    if (!newStudentName.trim()) return;
+    if (!newFirstName.trim() && !newLastName.trim()) return;
     try {
-      const s = await api.createStudent(classId, newStudentName.trim(), newStudentRef.trim());
-      setStudents(prev => [...prev, s].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewStudentName('');
+      const s = await api.createStudent(classId, newFirstName.trim(), newLastName.trim(), newStudentRef.trim());
+      setStudents(prev => [...prev, s]);
+      setNewFirstName('');
+      setNewLastName('');
       setNewStudentRef('');
     } catch (err) { setError(err.message); }
   }
@@ -60,9 +88,14 @@ export default function ClassView() {
   async function handleImport(importedStudents) {
     try {
       const created = await api.importStudents(classId, importedStudents);
-      setStudents(prev => [...prev, ...created].sort((a, b) => a.name.localeCompare(b.name)));
+      setStudents(prev => [...prev, ...created]);
       setShowImport(false);
     } catch (err) { setError(err.message); }
+  }
+
+  function handleProfileSave(updated) {
+    setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+    setProfileStudent(null);
   }
 
   async function createTest(e) {
@@ -84,11 +117,20 @@ export default function ClassView() {
     } catch (err) { setError(err.message); }
   }
 
-  if (loading) return <div className="page"><p>Loading...</p></div>;
+  if (loading) return <div className="page"><p>Loading…</p></div>;
 
   return (
     <div className="page container">
       {showImport && <StudentImport onImport={handleImport} onClose={() => setShowImport(false)} />}
+      {profileStudent && (
+        <StudentProfile
+          student={profileStudent}
+          classId={classId}
+          className={cls?.name}
+          onSave={handleProfileSave}
+          onClose={() => setProfileStudent(null)}
+        />
+      )}
 
       <div className="breadcrumb"><Link to="/">My Classes</Link> / {cls?.name}</div>
       <div className="page-header">
@@ -111,20 +153,24 @@ export default function ClassView() {
           <div className="card">
             <div className="flex items-center justify-between mb-2">
               <strong style={{ fontSize: '0.9rem' }}>Add student</strong>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowImport(true)}>
-                ↑ Import students
-              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowImport(true)}>↑ Import students</button>
             </div>
             <form onSubmit={addStudent} className="flex gap-1">
               <input
-                style={{ flex: 2, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
-                placeholder="Full name"
-                value={newStudentName}
-                onChange={e => setNewStudentName(e.target.value)}
+                style={{ flex: 1.2, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
+                placeholder="First name"
+                value={newFirstName}
+                onChange={e => setNewFirstName(e.target.value)}
               />
               <input
-                style={{ flex: 1, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
-                placeholder="ID / ref (optional)"
+                style={{ flex: 1.2, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
+                placeholder="Last name"
+                value={newLastName}
+                onChange={e => setNewLastName(e.target.value)}
+              />
+              <input
+                style={{ flex: 0.8, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
+                placeholder="ID (optional)"
                 value={newStudentRef}
                 onChange={e => setNewStudentRef(e.target.value)}
               />
@@ -142,19 +188,41 @@ export default function ClassView() {
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Student ID</th>
-                    <th></th>
+                    <th style={{ width: 36 }}>#</th>
+                    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('first_name')}>
+                      First name <SortIcon col="first_name" />
+                    </th>
+                    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('last_name')}>
+                      Last name <SortIcon col="last_name" />
+                    </th>
+                    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('student_ref')}>
+                      Student ID <SortIcon col="student_ref" />
+                    </th>
+                    <th style={{ width: 50 }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((s, i) => (
+                  {sortedStudents.map((s, i) => (
                     <tr key={s.id}>
-                      <td style={{ color: '#9ca3af', width: 40 }}>{i + 1}</td>
-                      <td>{s.name}</td>
+                      <td style={{ color: '#9ca3af' }}>{i + 1}</td>
+                      <td>
+                        <button
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#4f46e5', fontWeight: 500 }}
+                          onClick={() => setProfileStudent(s)}
+                        >
+                          {s.first_name || s.name || '—'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#4f46e5', fontWeight: 500 }}
+                          onClick={() => setProfileStudent(s)}
+                        >
+                          {s.last_name || '—'}
+                        </button>
+                      </td>
                       <td style={{ color: '#6b7280' }}>{s.student_ref || '—'}</td>
-                      <td style={{ width: 60 }}>
+                      <td>
                         <button className="btn btn-danger btn-sm" onClick={() => deleteStudent(s.id)}>✕</button>
                       </td>
                     </tr>
@@ -178,8 +246,7 @@ export default function ClassView() {
                 onChange={e => setNewTestName(e.target.value)}
               />
               <input
-                type="number"
-                min={1} max={200}
+                type="number" min={1} max={200}
                 style={{ flex: 0.5, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
                 placeholder="Questions"
                 value={newTestQ}
