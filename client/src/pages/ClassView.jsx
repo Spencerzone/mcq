@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { api, studentDisplayName } from '../api.js';
 import StudentImport from '../components/StudentImport.jsx';
 import StudentProfile from '../components/StudentProfile.jsx';
+import ExportButton, { exportClassAllTests } from '../components/ExportButton.jsx';
 
 export default function ClassView() {
   const { classId } = useParams();
@@ -18,7 +19,10 @@ export default function ClassView() {
   const [newStudentRef, setNewStudentRef] = useState('');
   const [newTestName, setNewTestName] = useState('');
   const [newTestQ, setNewTestQ] = useState(10);
+  const [editingTestId, setEditingTestId] = useState(null);
+  const [editingTestName, setEditingTestName] = useState('');
   const [sort, setSort] = useState({ col: 'last_name', dir: 'asc' });
+  const editInputRef = useRef();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -115,6 +119,22 @@ export default function ClassView() {
       await api.deleteTest(id);
       setTests(prev => prev.filter(t => t.id !== id));
     } catch (err) { setError(err.message); }
+  }
+
+  function startEditTest(t) {
+    setEditingTestId(t.id);
+    setEditingTestName(t.name);
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }
+
+  async function saveTestName(id) {
+    const name = editingTestName.trim();
+    if (!name) { setEditingTestId(null); return; }
+    try {
+      await api.updateTest(id, { name });
+      setTests(prev => prev.map(t => t.id === id ? { ...t, name } : t));
+    } catch (err) { setError(err.message); }
+    setEditingTestId(null);
   }
 
   if (loading) return <div className="page"><p>Loading…</p></div>;
@@ -263,16 +283,42 @@ export default function ClassView() {
             </div>
           ) : (
             <div>
+              <div className="flex" style={{ justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                <ExportButton
+                  label="Export all test results"
+                  onClick={() => exportClassAllTests(classId, cls?.name)}
+                />
+              </div>
               {tests.map(t => (
                 <div key={t.id} className="card flex items-center justify-between">
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{t.name}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {editingTestId === t.id ? (
+                      <input
+                        ref={editInputRef}
+                        value={editingTestName}
+                        onChange={e => setEditingTestName(e.target.value)}
+                        onBlur={() => saveTestName(t.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') saveTestName(t.id);
+                          if (e.key === 'Escape') setEditingTestId(null);
+                        }}
+                        style={{ fontWeight: 600, fontSize: '1rem', width: '100%', padding: '0.15rem 0.4rem', border: '1px solid #4f46e5', borderRadius: 4 }}
+                      />
+                    ) : (
+                      <div
+                        style={{ fontWeight: 600, cursor: 'text', display: 'inline-block' }}
+                        onClick={() => startEditTest(t)}
+                        title="Click to rename"
+                      >
+                        {t.name} <span style={{ color: '#9ca3af', fontSize: '0.75rem', fontWeight: 400 }}>✎</span>
+                      </div>
+                    )}
                     <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: '0.15rem' }}>
                       {t.num_questions} questions &nbsp;·&nbsp;
                       {t.answer_key.filter(Boolean).length}/{t.num_questions} answers set
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1" style={{ marginLeft: '1rem' }}>
                     <Link to={`/tests/${t.id}/setup`} className="btn btn-secondary btn-sm">Answer key</Link>
                     <Link to={`/tests/${t.id}/mark`} className="btn btn-primary btn-sm">Mark</Link>
                     <button className="btn btn-danger btn-sm" onClick={() => deleteTest(t.id)}>✕</button>

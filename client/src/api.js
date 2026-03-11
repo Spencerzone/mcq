@@ -216,6 +216,32 @@ export const api = {
     await setDoc(responseRef(classId, tid, studentId), { answers });
     return { ok: true };
   },
+
+  // Fetch all tests + all responses for a whole class in one go
+  getAllClassMarks: async (classId) => {
+    const [studsSnap, testsSnap] = await Promise.all([
+      getDocs(studentsRef(classId)),
+      getDocs(testsRef(classId)),
+    ]);
+    const students = studsSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => studentDisplayName(a).localeCompare(studentDisplayName(b)));
+    const allResponseSnaps = await Promise.all(
+      testsSnap.docs.map(d => getDocs(responsesRef(classId, d.id)))
+    );
+    const tests = testsSnap.docs.map((d, i) => {
+      const responseMap = {};
+      allResponseSnaps[i].docs.forEach(r => { responseMap[r.id] = r.data().answers; });
+      return {
+        id: encodeTestId(classId, d.id),
+        name: d.data().name,
+        num_questions: d.data().num_questions,
+        answer_key: d.data().answer_key || [],
+        responseMap,
+      };
+    });
+    return { students, tests };
+  },
 };
 
 async function _deleteClassSubcollections(classId) {
