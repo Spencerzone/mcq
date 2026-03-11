@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, studentDisplayName } from '../api.js';
-import ExportButton, { exportStudent, exportTest } from '../components/ExportButton.jsx';
+import ExportButton, { exportStudentAllTests, exportTest } from '../components/ExportButton.jsx';
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
 
@@ -173,7 +173,7 @@ export default function MarkingView() {
                   {(() => { const { score, total } = getScore(currentStudent); return key.some(Boolean) ? (
                     <span className={`score-pill ${scoreClass(score, total)}`}>{score}/{total} ({Math.round(score/total*100)}%)</span>
                   ) : null; })()}
-                  <ExportButton label="Export student" onClick={() => exportStudent(currentStudent, test)} />
+                  <ExportButton label="Export student" onClick={() => exportStudentAllTests(currentStudent, test.class_id)} />
                   <button className="btn btn-secondary btn-sm" disabled={currentStudentIdx === 0} onClick={() => goToStudent(currentStudentIdx - 1)}>← Prev</button>
                   <button className="btn btn-secondary btn-sm" disabled={currentStudentIdx === students.length - 1} onClick={() => goToStudent(currentStudentIdx + 1)}>Next →</button>
                 </div>
