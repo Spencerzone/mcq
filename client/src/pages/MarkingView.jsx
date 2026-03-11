@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, studentDisplayName } from '../api.js';
 import ExportButton, { exportStudent, exportTest } from '../components/ExportButton.jsx';
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
@@ -147,7 +147,7 @@ export default function MarkingView() {
                 className={`student-item ${idx === currentStudentIdx ? 'active' : ''} ${done ? 'done' : ''}`}
                 onClick={() => goToStudent(idx)}
               >
-                <div>{s.name}</div>
+                <div>{studentDisplayName(s)}</div>
                 {s.student_ref && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{s.student_ref}</div>}
                 <div style={{ fontSize: '0.75rem', color: done ? '#059669' : '#9ca3af', marginTop: '0.1rem' }}>
                   {s.answers.filter(Boolean).length}/{total} answered
@@ -164,7 +164,7 @@ export default function MarkingView() {
             <>
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{currentStudent.name}</h2>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{studentDisplayName(currentStudent)}</h2>
                   {currentStudent.student_ref && (
                     <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>ID: {currentStudent.student_ref}</span>
                   )}

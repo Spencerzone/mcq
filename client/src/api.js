@@ -31,6 +31,30 @@ function decodeTestId(testId) {
   return [testId.slice(0, i), testId.slice(i + 2)];
 }
 
+// Display helper — handles both new {first_name, last_name} and legacy {name}
+export function studentDisplayName(s) {
+  if (s && (s.first_name !== undefined || s.last_name !== undefined)) {
+    return `${s.first_name || ''} ${s.last_name || ''}`.trim();
+  }
+  return s?.name || '';
+}
+
+// Split a full name string into first/last. Handles "Last, First" and "First Last" formats.
+export function splitName(fullName) {
+  const trimmed = (fullName || '').trim();
+  if (!trimmed) return { first_name: '', last_name: '' };
+  if (trimmed.includes(',')) {
+    const comma = trimmed.indexOf(',');
+    return {
+      last_name: trimmed.slice(0, comma).trim(),
+      first_name: trimmed.slice(comma + 1).trim(),
+    };
+  }
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return { first_name: parts[0], last_name: '' };
+  return { first_name: parts.slice(0, -1).join(' '), last_name: parts[parts.length - 1] };
+}
+
 export const api = {
   // Classes
   getClasses: async () => snaps(await getDocs(classesRef())),
@@ -59,34 +83,67 @@ export const api = {
 
   // Students
   getStudents: async (classId) => {
-    const qs = await getDocs(query(studentsRef(classId), orderBy('name')));
+    const qs = await getDocs(studentsRef(classId));
     return snaps(qs).map(s => ({ ...s, class_id: classId }));
   },
 
-  createStudent: async (classId, name, student_ref) => {
-    const ref = await addDoc(studentsRef(classId), { name, student_ref: student_ref || '' });
-    return { id: ref.id, class_id: classId, name, student_ref: student_ref || '' };
+  createStudent: async (classId, first_name, last_name, student_ref) => {
+    const data = { first_name: first_name || '', last_name: last_name || '', student_ref: student_ref || '' };
+    const ref = await addDoc(studentsRef(classId), data);
+    return { id: ref.id, class_id: classId, ...data };
   },
 
   importStudents: async (classId, students) => {
     const batch = writeBatch(db);
-    const results = students.filter(s => s.name).map(s => {
-      const ref = doc(studentsRef(classId));
-      batch.set(ref, { name: s.name, student_ref: s.student_ref || '' });
-      return { id: ref.id, class_id: classId, name: s.name, student_ref: s.student_ref || '' };
-    });
+    const results = students
+      .filter(s => s.first_name || s.last_name || s.name)
+      .map(s => {
+        const ref = doc(studentsRef(classId));
+        // Accept either new {first_name, last_name} or legacy {name}
+        const data = s.first_name !== undefined
+          ? { first_name: s.first_name || '', last_name: s.last_name || '', student_ref: s.student_ref || '' }
+          : { ...splitName(s.name), student_ref: s.student_ref || '' };
+        batch.set(ref, data);
+        return { id: ref.id, class_id: classId, ...data };
+      });
     await batch.commit();
     return results;
   },
 
-  updateStudent: async (classId, studentId, name, student_ref) => {
-    await updateDoc(studentRef(classId, studentId), { name, student_ref: student_ref || '' });
+  updateStudent: async (classId, studentId, first_name, last_name, student_ref) => {
+    await updateDoc(studentRef(classId, studentId), {
+      first_name: first_name || '',
+      last_name: last_name || '',
+      student_ref: student_ref || '',
+    });
     return { ok: true };
   },
 
   deleteStudent: async (classId, studentId) => {
     await deleteDoc(studentRef(classId, studentId));
     return { ok: true };
+  },
+
+  // Fetch all test results for one student in a class
+  getStudentMarks: async (classId, studentId) => {
+    const testsSnap = await getDocs(testsRef(classId));
+    const tests = testsSnap.docs.map(d => ({
+      id: encodeTestId(classId, d.id),
+      ...d.data(),
+      answer_key: d.data().answer_key || [],
+    }));
+    const responseSnaps = await Promise.all(
+      testsSnap.docs.map(d => getDoc(responseRef(classId, d.id, studentId)))
+    );
+    return tests.map((test, i) => {
+      const answers = responseSnaps[i].exists()
+        ? responseSnaps[i].data().answers
+        : Array(test.num_questions).fill(null);
+      const answered = answers.filter(Boolean).length;
+      const score = answers.filter((a, j) => a && test.answer_key[j] && a === test.answer_key[j]).length;
+      const hasKey = test.answer_key.some(Boolean);
+      return { test, answers, answered, score, hasKey };
+    });
   },
 
   // Tests
@@ -138,17 +195,19 @@ export const api = {
     const [classId, tid] = decodeTestId(testId);
     const [testSnap, studentsSnap, responsesSnap] = await Promise.all([
       getDoc(testRef(classId, tid)),
-      getDocs(query(studentsRef(classId), orderBy('name'))),
+      getDocs(studentsRef(classId)),
       getDocs(responsesRef(classId, tid)),
     ]);
     if (!testSnap.exists()) throw new Error('Test not found');
     const testData = { id: testId, class_id: classId, ...testSnap.data(), answer_key: testSnap.data().answer_key || [] };
     const responseMap = {};
     responsesSnap.docs.forEach(d => { responseMap[d.id] = d.data().answers; });
-    const students = studentsSnap.docs.map(d => ({
-      id: d.id, class_id: classId, ...d.data(),
-      answers: responseMap[d.id] || Array(testData.num_questions).fill(null),
-    }));
+    const students = studentsSnap.docs
+      .map(d => ({
+        id: d.id, class_id: classId, ...d.data(),
+        answers: responseMap[d.id] || Array(testData.num_questions).fill(null),
+      }))
+      .sort((a, b) => studentDisplayName(a).localeCompare(studentDisplayName(b)));
     return { test: testData, students };
   },
 

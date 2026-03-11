@@ -1,5 +1,6 @@
 import React from 'react';
 import Papa from 'papaparse';
+import { studentDisplayName } from '../api.js';
 
 // Export per-student: rows = questions
 export function exportStudent(student, test) {
@@ -11,9 +12,8 @@ export function exportStudent(student, test) {
     Student_Answer: answers[i] || '',
     Correct: key[i] && answers[i] ? (answers[i] === key[i] ? 'Yes' : 'No') : ''
   }));
-  const score = answers.filter((a, i) => a && key[i] && a === key[i]).length;
   const csv = Papa.unparse(rows);
-  download(csv, `${student.name}_${test.name}.csv`);
+  download(csv, `${studentDisplayName(student)}_${test.name}.csv`);
 }
 
 // Export per-test/class: rows = students
@@ -23,7 +23,7 @@ export function exportTest(students, test) {
     const answers = s.answers;
     const score = answers.filter((a, i) => a && key[i] && a === key[i]).length;
     const attempted = answers.filter(Boolean).length;
-    const row = { Name: s.name, Student_ID: s.student_ref || '' };
+    const row = { First_Name: s.first_name || s.name || '', Last_Name: s.last_name || '', Student_ID: s.student_ref || '' };
     answers.forEach((a, i) => { row[`Q${i + 1}`] = a || ''; });
     row.Score = `${score}/${test.num_questions}`;
     row.Percentage = attempted > 0 ? `${Math.round(score / test.num_questions * 100)}%` : '';
