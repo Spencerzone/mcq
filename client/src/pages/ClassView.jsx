@@ -27,7 +27,7 @@ export default function ClassView() {
         api.getStudents(classId),
         api.getTests(classId)
       ]);
-      const found = classes.find(c => c.id === Number(classId));
+      const found = classes.find(c => c.id === classId);
       if (!found) { navigate('/'); return; }
       setCls(found);
       setStudents(studs);
@@ -70,7 +70,7 @@ export default function ClassView() {
     e.preventDefault();
     if (!newTestName.trim() || !newTestQ) return;
     try {
-      const t = await api.createTest(Number(classId), newTestName.trim(), Number(newTestQ));
+      const t = await api.createTest(classId, newTestName.trim(), Number(newTestQ));
       setTests(prev => [...prev, t]);
       setNewTestName('');
       setNewTestQ(10);
