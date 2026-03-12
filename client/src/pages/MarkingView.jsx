@@ -63,6 +63,12 @@ export default function MarkingView() {
       if (currentQIdx < test.num_questions - 1) {
         setCurrentQIdx(prev => prev + 1);
       }
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      setAnswer(currentStudentIdx, currentQIdx, '-');
+      if (currentQIdx < test.num_questions - 1) {
+        setCurrentQIdx(prev => prev + 1);
+      }
     } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       setCurrentQIdx(prev => Math.min(prev + 1, test.num_questions - 1));
@@ -150,7 +156,7 @@ export default function MarkingView() {
                 <div>{studentDisplayName(s)}</div>
                 {s.student_ref && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{s.student_ref}</div>}
                 <div style={{ fontSize: '0.75rem', color: done ? '#059669' : '#9ca3af', marginTop: '0.1rem' }}>
-                  {s.answers.filter(Boolean).length}/{total} answered
+                  {s.answers.filter(a => a && a !== '-').length}/{total} answered
                   {done && key.some(Boolean) && ` · ${score}/${total}`}
                 </div>
               </div>
@@ -181,8 +187,9 @@ export default function MarkingView() {
 
               <div className="card mb-2" style={{ padding: '0.6rem 1rem' }}>
                 <span className="kbd-hint">
-                  <kbd>1</kbd>=A <kbd>2</kbd>=B <kbd>3</kbd>=C <kbd>4</kbd>=D to answer &nbsp;·&nbsp;
-                  <kbd>←</kbd><kbd>→</kbd> navigate questions &nbsp;·&nbsp;
+                  <kbd>1</kbd>=A <kbd>2</kbd>=B <kbd>3</kbd>=C <kbd>4</kbd>=D &nbsp;·&nbsp;
+                  <kbd>Space</kbd>=no answer &nbsp;·&nbsp;
+                  <kbd>←</kbd><kbd>→</kbd> navigate &nbsp;·&nbsp;
                   <kbd>Tab</kbd>/<kbd>Shift+Tab</kbd> next/prev student
                 </span>
               </div>
@@ -194,7 +201,8 @@ export default function MarkingView() {
                   <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Q{currentQIdx + 1}</span>
                   <div className="answer-options">
                     {OPTIONS.map((opt, i) => {
-                      const selected = currentStudent.answers[currentQIdx] === opt;
+                      const ans = currentStudent.answers[currentQIdx];
+                      const selected = ans === opt;
                       const correct = key[currentQIdx] === opt;
                       let cls = 'answer-btn';
                       if (selected && correct && showKey) cls += ' correct';
@@ -213,6 +221,9 @@ export default function MarkingView() {
                       );
                     })}
                   </div>
+                  {currentStudent.answers[currentQIdx] === '-' && (
+                    <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>No answer</span>
+                  )}
                   {showKey && key[currentQIdx] && (
                     <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 600 }}>
                       Correct: {key[currentQIdx]}
@@ -224,38 +235,41 @@ export default function MarkingView() {
               {/* All questions grid */}
               <div className="question-grid">
                 {Array.from({ length: test.num_questions }, (_, i) => {
-                  const answered = currentStudent.answers[i];
+                  const ans = currentStudent.answers[i];
                   const correct = key[i];
                   const isCurrent = i === currentQIdx;
-                  const isCorrect = answered && correct && answered === correct;
-                  const isWrong = answered && correct && answered !== correct;
+                  const isSkipped = ans === '-';
+                  let cardClass = 'question-card';
+                  if (isCurrent) cardClass += ' current';
+                  else if (isSkipped) cardClass += ' skipped';
+                  else if (ans) cardClass += ' answered';
                   return (
-                    <div
-                      key={i}
-                      className={`question-card${isCurrent ? ' current' : ''}${answered ? ' answered' : ''}`}
-                      onClick={() => setCurrentQIdx(i)}
-                    >
+                    <div key={i} className={cardClass} onClick={() => setCurrentQIdx(i)}>
                       <div className="question-num">Q{i + 1}</div>
-                      <div className="answer-options">
-                        {OPTIONS.map((opt, oi) => {
-                          const sel = answered === opt;
-                          const corr = correct === opt;
-                          let cls = 'answer-btn';
-                          if (sel && corr && showKey) cls += ' correct';
-                          else if (sel && !corr && showKey && correct) cls += ' wrong';
-                          else if (sel) cls += ' selected';
-                          else if (corr && showKey) cls += ' correct';
-                          return (
-                            <button
-                              key={opt}
-                              className={cls}
-                              onClick={e => { e.stopPropagation(); setAnswer(currentStudentIdx, i, opt); setCurrentQIdx(i); }}
-                            >
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {isSkipped ? (
+                        <div style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 600, marginTop: '0.2rem' }}>No answer</div>
+                      ) : (
+                        <div className="answer-options">
+                          {OPTIONS.map((opt, oi) => {
+                            const sel = ans === opt;
+                            const corr = correct === opt;
+                            let cls = 'answer-btn';
+                            if (sel && corr && showKey) cls += ' correct';
+                            else if (sel && !corr && showKey && correct) cls += ' wrong';
+                            else if (sel) cls += ' selected';
+                            else if (corr && showKey) cls += ' correct';
+                            return (
+                              <button
+                                key={opt}
+                                className={cls}
+                                onClick={e => { e.stopPropagation(); setAnswer(currentStudentIdx, i, opt); setCurrentQIdx(i); }}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

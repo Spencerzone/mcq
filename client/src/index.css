@@ -128,6 +128,7 @@ tr:hover td { background: #f9fafb; }
 }
 .question-card.current { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
 .question-card.answered { border-color: #d1d5db; background: #f9fafb; }
+.question-card.skipped { border-color: #ef4444; background: #fff1f2; }
 .question-num { font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; font-weight: 600; }
 .answer-options { display: flex; gap: 0.25rem; flex-wrap: wrap; }
 .answer-btn {
