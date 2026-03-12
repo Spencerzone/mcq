@@ -91,11 +91,11 @@ export async function exportClassAllTests(classId, className) {
       const hasKey = test.answer_key.some(Boolean);
       const score = answers.filter((a, i) => a && test.answer_key[i] && a === test.answer_key[i]).length;
       const answered = answers.filter(Boolean).length;
-      row[`${test.name} – Answered`] = `${answered}/${test.num_questions}`;
+      row[`${test.name} - Answered`] = `${answered}/${test.num_questions}`;
       if (hasKey) {
-        row[`${test.name} – Score`] = score;
-        row[`${test.name} – Total`] = test.num_questions;
-        row[`${test.name} – %`] = `${Math.round(score / test.num_questions * 100)}%`;
+        row[`${test.name} - Score`] = score;
+        row[`${test.name} - Total`] = test.num_questions;
+        row[`${test.name} - %`] = `${Math.round(score / test.num_questions * 100)}%`;
         totalScore += score;
         totalMax += test.num_questions;
       }
@@ -112,7 +112,7 @@ export async function exportClassAllTests(classId, className) {
 }
 
 function download(csv, filename) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
