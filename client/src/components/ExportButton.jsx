@@ -2,6 +2,48 @@ import React from 'react';
 import Papa from 'papaparse';
 import { api, studentDisplayName } from '../api.js';
 
+// Export analysis modal data for a test
+export function exportTestAnalysis(analysisData, testName) {
+  const { test, hasKey, testStats, questionStats } = analysisData;
+
+  // Section 1: test-level summary
+  const summaryRows = [{ Metric: 'Students marked', Value: testStats.n }];
+  if (hasKey) {
+    summaryRows.push(
+      { Metric: 'Mean score', Value: testStats.mean !== null ? testStats.mean.toFixed(2) : '' },
+      { Metric: 'Median score', Value: testStats.median ?? '' },
+      { Metric: 'Mode score(s)', Value: testStats.mode.join(', ') },
+      { Metric: 'Std deviation', Value: testStats.stdDev !== null ? testStats.stdDev.toFixed(2) : '' },
+    );
+  }
+
+  // Section 2: per-question rows
+  const qRows = questionStats.map(qs => {
+    const row = {
+      Question: `Q${qs.q}`,
+      Correct_Answer: qs.correct || '',
+      Count_A: qs.counts.A,
+      Count_B: qs.counts.B,
+      Count_C: qs.counts.C,
+      Count_D: qs.counts.D,
+      Most_Selected: qs.top ? `${qs.top.option} (${qs.top.count})` : '',
+      Second_Most_Selected: qs.second ? `${qs.second.option} (${qs.second.count})` : '',
+    };
+    if (hasKey) {
+      row['Mean_%'] = qs.mean !== null ? `${Math.round(qs.mean * 100)}%` : '';
+      row['Median'] = qs.median !== null ? qs.median : '';
+      row['Std_Dev'] = qs.stdDev !== null ? qs.stdDev.toFixed(2) : '';
+    }
+    return row;
+  });
+
+  const csv =
+    'Test Summary\n' + Papa.unparse(summaryRows) +
+    '\n\nQuestion Analysis\n' + Papa.unparse(qRows);
+
+  download(csv, `${testName}_analysis.csv`);
+}
+
 // Export one student's results across ALL their tests in this class
 export async function exportStudentAllTests(student, classId) {
   const marks = await api.getStudentMarks(classId, student.id);
