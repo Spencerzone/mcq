@@ -170,6 +170,13 @@ export const api = {
     return { id: encodeTestId(classId, ref.id), class_id: classId, name, num_questions: Number(num_questions), answer_key };
   },
 
+  importTest: async (classId, name, num_questions, answer_key) => {
+    const num = Number(num_questions);
+    const key = (answer_key || []).slice(0, num).concat(Array(Math.max(0, num - (answer_key || []).length)).fill(null));
+    const ref = await addDoc(testsRef(classId), { name, num_questions: num, answer_key: key });
+    return { id: encodeTestId(classId, ref.id), class_id: classId, name, num_questions: num, answer_key: key };
+  },
+
   updateTest: async (testId, updates) => {
     const [classId, tid] = decodeTestId(testId);
     const data = {};

@@ -4,7 +4,8 @@ import { api, studentDisplayName } from '../api.js';
 import StudentImport from '../components/StudentImport.jsx';
 import StudentProfile from '../components/StudentProfile.jsx';
 import TestAnalysis from '../components/TestAnalysis.jsx';
-import ExportButton, { exportClassAllTests } from '../components/ExportButton.jsx';
+import ImportTestModal from '../components/ImportTestModal.jsx';
+import ExportButton, { exportClassAllTests, exportTestTemplate } from '../components/ExportButton.jsx';
 
 export default function ClassView() {
   const { classId } = useParams();
@@ -23,6 +24,7 @@ export default function ClassView() {
   const [editingTestId, setEditingTestId] = useState(null);
   const [editingTestName, setEditingTestName] = useState('');
   const [analysisTest, setAnalysisTest] = useState(null);
+  const [showImportTest, setShowImportTest] = useState(false);
   const [sort, setSort] = useState({ col: 'last_name', dir: 'asc' });
   const editInputRef = useRef();
   const [error, setError] = useState('');
@@ -139,6 +141,14 @@ export default function ClassView() {
     setEditingTestId(null);
   }
 
+  async function handleTestImport({ name, num_questions, answer_key }) {
+    try {
+      const t = await api.importTest(classId, name, num_questions, answer_key);
+      setTests(prev => [...prev, t]);
+      setShowImportTest(false);
+    } catch (err) { setError(err.message); }
+  }
+
   if (loading) return <div className="page"><p>Loading…</p></div>;
 
   return (
@@ -155,6 +165,9 @@ export default function ClassView() {
       )}
       {analysisTest && (
         <TestAnalysis test={analysisTest} onClose={() => setAnalysisTest(null)} />
+      )}
+      {showImportTest && (
+        <ImportTestModal currentClassId={classId} onImport={handleTestImport} onClose={() => setShowImportTest(false)} />
       )}
 
       <div className="breadcrumb"><Link to="/">My Classes</Link> / {cls?.name}</div>
@@ -262,7 +275,10 @@ export default function ClassView() {
       {tab === 'tests' && (
         <div>
           <div className="card">
-            <strong style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>Create test</strong>
+            <div className="flex items-center justify-between" style={{ marginBottom: '0.75rem' }}>
+              <strong style={{ fontSize: '0.9rem' }}>Create test</strong>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowImportTest(true)}>↑ Import test</button>
+            </div>
             <form onSubmit={createTest} className="flex gap-1 items-center">
               <input
                 style={{ flex: 2, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6 }}
@@ -327,6 +343,7 @@ export default function ClassView() {
                     <Link to={`/tests/${t.id}/setup`} className="btn btn-secondary btn-sm">Answer key</Link>
                     <Link to={`/tests/${t.id}/mark`} className="btn btn-primary btn-sm">Mark</Link>
                     <button className="btn btn-secondary btn-sm" onClick={() => setAnalysisTest(t)}>Analysis</button>
+                    <button className="btn btn-secondary btn-sm" title="Download test template (name + answer key)" onClick={() => exportTestTemplate(t)}>↓ Template</button>
                     <button className="btn btn-danger btn-sm" onClick={() => deleteTest(t.id)}>✕</button>
                   </div>
                 </div>

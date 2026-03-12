@@ -158,6 +158,18 @@ function download(csv, filename) {
   URL.revokeObjectURL(url);
 }
 
+// Download a test as a reusable JSON template (name + answer key)
+export function exportTestTemplate(test) {
+  const template = { name: test.name, num_questions: test.num_questions, answer_key: test.answer_key };
+  const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${test.name.replace(/[^a-z0-9]/gi, '_')}_template.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ExportButton({ label, onClick, className = 'btn btn-secondary btn-sm' }) {
   return (
     <button className={className} onClick={onClick} title="Export CSV">
