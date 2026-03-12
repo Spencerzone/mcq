@@ -149,7 +149,6 @@ export default function TestAnalysis({ test, onClose }) {
                       {data.hasKey && (
                         <>
                           <th style={{ textAlign: 'right' }} title="Proportion of answerers who were correct">Mean %</th>
-                          <th style={{ textAlign: 'right' }}>Median</th>
                           <th style={{ textAlign: 'right' }} title="Standard deviation of binary correct/incorrect score">SD</th>
                         </>
                       )}
@@ -200,9 +199,6 @@ export default function TestAnalysis({ test, onClose }) {
                             <>
                               <td style={{ textAlign: 'right', fontWeight: 600, color: meanColor }}>
                                 {meanPct !== null ? `${meanPct}%` : '—'}
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                {qs.median !== null ? qs.median : '—'}
                               </td>
                               <td style={{ textAlign: 'right' }}>
                                 {qs.stdDev !== null ? qs.stdDev.toFixed(2) : '—'}

@@ -31,7 +31,6 @@ export function exportTestAnalysis(analysisData, testName) {
     };
     if (hasKey) {
       row['Mean_%'] = qs.mean !== null ? `${Math.round(qs.mean * 100)}%` : '';
-      row['Median'] = qs.median !== null ? qs.median : '';
       row['Std_Dev'] = qs.stdDev !== null ? qs.stdDev.toFixed(2) : '';
     }
     return row;
