@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, studentDisplayName } from '../api.js';
+import { exportStudentAllTests } from './ExportButton.jsx';
 
 export default function StudentProfile({ student, classId, className, onSave, onClose }) {
   const [firstName, setFirstName] = useState(student.first_name ?? (student.name ? student.name.split(' ').slice(0, -1).join(' ') : ''));
@@ -72,6 +73,9 @@ export default function StudentProfile({ student, classId, className, onSave, on
             {saving ? 'Saving…' : 'Save changes'}
           </button>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-secondary" onClick={() => exportStudentAllTests({ ...student, first_name: firstName, last_name: lastName }, classId)}>
+            Export student
+          </button>
         </div>
 
         {/* Test results */}
