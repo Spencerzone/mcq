@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { api, studentDisplayName } from '../api.js';
 import StudentImport from '../components/StudentImport.jsx';
 import StudentProfile from '../components/StudentProfile.jsx';
+import TestAnalysis from '../components/TestAnalysis.jsx';
 import ExportButton, { exportClassAllTests } from '../components/ExportButton.jsx';
 
 export default function ClassView() {
@@ -21,6 +22,7 @@ export default function ClassView() {
   const [newTestQ, setNewTestQ] = useState(10);
   const [editingTestId, setEditingTestId] = useState(null);
   const [editingTestName, setEditingTestName] = useState('');
+  const [analysisTest, setAnalysisTest] = useState(null);
   const [sort, setSort] = useState({ col: 'last_name', dir: 'asc' });
   const editInputRef = useRef();
   const [error, setError] = useState('');
@@ -150,6 +152,9 @@ export default function ClassView() {
           onSave={handleProfileSave}
           onClose={() => setProfileStudent(null)}
         />
+      )}
+      {analysisTest && (
+        <TestAnalysis test={analysisTest} onClose={() => setAnalysisTest(null)} />
       )}
 
       <div className="breadcrumb"><Link to="/">My Classes</Link> / {cls?.name}</div>
@@ -321,6 +326,7 @@ export default function ClassView() {
                   <div className="flex gap-1" style={{ marginLeft: '1rem' }}>
                     <Link to={`/tests/${t.id}/setup`} className="btn btn-secondary btn-sm">Answer key</Link>
                     <Link to={`/tests/${t.id}/mark`} className="btn btn-primary btn-sm">Mark</Link>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setAnalysisTest(t)}>Analysis</button>
                     <button className="btn btn-danger btn-sm" onClick={() => deleteTest(t.id)}>✕</button>
                   </div>
                 </div>
