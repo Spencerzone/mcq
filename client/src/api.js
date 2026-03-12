@@ -139,7 +139,7 @@ export const api = {
       const answers = responseSnaps[i].exists()
         ? responseSnaps[i].data().answers
         : Array(test.num_questions).fill(null);
-      const answered = answers.filter(Boolean).length;
+      const answered = answers.filter(a => a && a !== '-').length;
       const score = answers.filter((a, j) => a && test.answer_key[j] && a === test.answer_key[j]).length;
       const hasKey = test.answer_key.some(Boolean);
       return { test, answers, answered, score, hasKey };

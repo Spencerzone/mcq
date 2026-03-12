@@ -57,13 +57,15 @@ export async function exportStudentAllTests(student, classId) {
     rows.push({ Test: test.name, Question: '', Correct_Answer: '', Student_Answer: '', Correct: '' });
     // Per-question rows
     for (let i = 0; i < test.num_questions; i++) {
+      const a = answers[i];
+      const studentAns = (a && a !== '-') ? a : '';
       rows.push({
         Test: '',
         Question: `Q${i + 1}`,
         Correct_Answer: test.answer_key[i] || '',
-        Student_Answer: answers[i] || '',
-        Correct: test.answer_key[i] && answers[i]
-          ? (answers[i] === test.answer_key[i] ? 'Yes' : 'No')
+        Student_Answer: studentAns,
+        Correct: test.answer_key[i] && studentAns
+          ? (studentAns === test.answer_key[i] ? 'Yes' : 'No')
           : '',
       });
     }
@@ -72,7 +74,7 @@ export async function exportStudentAllTests(student, classId) {
       Test: '',
       Question: 'TOTAL',
       Correct_Answer: '',
-      Student_Answer: `${answered}/${test.num_questions} answered`,
+      Student_Answer: '',
       Correct: hasKey ? `${score}/${test.num_questions} (${Math.round(score / test.num_questions * 100)}%)` : 'No answer key',
     });
     // Blank separator
@@ -88,20 +90,17 @@ export function exportTest(students, test) {
   const hasKey = key.some(Boolean);
 
   const makeRow = (s, answers) => {
-    const score = answers.filter((a, i) => a && key[i] && a === key[i]).length;
-    const answered = answers.filter(Boolean).length;
+    const score = answers.filter((a, i) => a && a !== '-' && key[i] && a === key[i]).length;
     const row = {
       First_Name: s.first_name || s.name || '',
       Last_Name: s.last_name || '',
       Student_ID: s.student_ref || '',
     };
-    answers.forEach((a, i) => { row[`Q${i + 1}`] = a || ''; });
+    answers.forEach((a, i) => { row[`Q${i + 1}`] = (a && a !== '-') ? a : ''; });
     if (hasKey) {
       row.Score = score;
       row.Total = test.num_questions;
-      row.Percentage = answered > 0 ? `${Math.round(score / test.num_questions * 100)}%` : '';
-    } else {
-      row.Answered = `${answered}/${test.num_questions}`;
+      row.Percentage = `${Math.round(score / test.num_questions * 100)}%`;
     }
     return row;
   };
@@ -110,7 +109,6 @@ export function exportTest(students, test) {
   const keyRow = { First_Name: '-- Answer Key --', Last_Name: '', Student_ID: '' };
   key.forEach((k, i) => { keyRow[`Q${i + 1}`] = k || ''; });
   if (hasKey) { keyRow.Score = ''; keyRow.Total = ''; keyRow.Percentage = ''; }
-  else { keyRow.Answered = ''; }
 
   const rows = [keyRow, ...students.map(s => makeRow(s, s.answers))];
   download(Papa.unparse(rows), `${test.name}_results.csv`);
@@ -131,9 +129,7 @@ export async function exportClassAllTests(classId, className) {
     for (const test of tests) {
       const answers = test.responseMap[s.id] || Array(test.num_questions).fill(null);
       const hasKey = test.answer_key.some(Boolean);
-      const score = answers.filter((a, i) => a && test.answer_key[i] && a === test.answer_key[i]).length;
-      const answered = answers.filter(Boolean).length;
-      row[`${test.name} - Answered`] = `${answered}/${test.num_questions}`;
+      const score = answers.filter((a, i) => a && a !== '-' && test.answer_key[i] && a === test.answer_key[i]).length;
       if (hasKey) {
         row[`${test.name} - Score`] = score;
         row[`${test.name} - Total`] = test.num_questions;

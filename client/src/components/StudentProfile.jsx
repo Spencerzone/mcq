@@ -9,6 +9,7 @@ export default function StudentProfile({ student, classId, className, onSave, on
   const [marks, setMarks] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [markSort, setMarkSort] = useState({ col: 'test', dir: 'asc' });
 
   useEffect(() => {
     api.getStudentMarks(classId, student.id)
@@ -84,42 +85,58 @@ export default function StudentProfile({ student, classId, className, onSave, on
 
         {marks === null && <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Loading…</p>}
         {marks && marks.length === 0 && <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>No tests in this class yet.</p>}
-        {marks && marks.length > 0 && (
-          <div className="card" style={{ padding: 0 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Test</th>
-                  <th>Answered</th>
-                  <th>Score</th>
-                  <th>%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {marks.map(({ test, answered, score, hasKey }) => (
-                  <tr key={test.id}>
-                    <td>{test.name}</td>
-                    <td style={{ color: answered === test.num_questions ? '#059669' : '#6b7280' }}>
-                      {answered}/{test.num_questions}
-                    </td>
-                    <td>
-                      {hasKey
-                        ? <span className={`score-pill ${scoreClass(score, test.num_questions)}`}>{score}/{test.num_questions}</span>
-                        : <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>No key set</span>
-                      }
-                    </td>
-                    <td>
-                      {hasKey && answered > 0
-                        ? `${Math.round(score / test.num_questions * 100)}%`
-                        : '—'
-                      }
-                    </td>
+        {marks && marks.length > 0 && (() => {
+          function sortVal(m) {
+            if (markSort.col === 'test') return m.test.name.toLowerCase();
+            if (markSort.col === 'score') return m.hasKey ? m.score : -1;
+            if (markSort.col === 'pct') return m.hasKey ? m.score / m.test.num_questions : -1;
+            return 0;
+          }
+          const sorted = [...marks].sort((a, b) => {
+            const av = sortVal(a), bv = sortVal(b);
+            if (typeof av === 'string') return markSort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            return markSort.dir === 'asc' ? av - bv : bv - av;
+          });
+          function toggleMarkSort(col) {
+            setMarkSort(prev => prev.col === col
+              ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+              : { col, dir: 'desc' });
+          }
+          function SortIcon({ col }) {
+            if (markSort.col !== col) return <span style={{ color: '#d1d5db', marginLeft: 3 }}>↕</span>;
+            return <span style={{ color: '#4f46e5', marginLeft: 3 }}>{markSort.dir === 'asc' ? '↑' : '↓'}</span>;
+          }
+          const thStyle = { cursor: 'pointer', userSelect: 'none' };
+          return (
+            <div className="card" style={{ padding: 0 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={thStyle} onClick={() => toggleMarkSort('test')}>Test <SortIcon col="test" /></th>
+                    <th style={thStyle} onClick={() => toggleMarkSort('score')}>Score <SortIcon col="score" /></th>
+                    <th style={thStyle} onClick={() => toggleMarkSort('pct')}>% <SortIcon col="pct" /></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {sorted.map(({ test, score, hasKey }) => (
+                    <tr key={test.id}>
+                      <td>{test.name}</td>
+                      <td>
+                        {hasKey
+                          ? <span className={`score-pill ${scoreClass(score, test.num_questions)}`}>{score}/{test.num_questions}</span>
+                          : <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>No key</span>
+                        }
+                      </td>
+                      <td style={{ fontWeight: hasKey ? 600 : 400, color: hasKey ? undefined : '#9ca3af' }}>
+                        {hasKey ? `${Math.round(score / test.num_questions * 100)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
