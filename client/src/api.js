@@ -39,6 +39,12 @@ export function studentDisplayName(s) {
   return s?.name || '';
 }
 
+// Sort key helper — sorts by last name, falling back to legacy {name} split into last name.
+function studentSortKey(s) {
+  if (s && s.last_name !== undefined) return (s.last_name || '').toLowerCase();
+  return splitName(s?.name).last_name.toLowerCase();
+}
+
 // Split a full name string into first/last. Handles "Last, First" and "First Last" formats.
 export function splitName(fullName) {
   const trimmed = (fullName || '').trim();
@@ -214,7 +220,7 @@ export const api = {
         id: d.id, class_id: classId, ...d.data(),
         answers: responseMap[d.id] || Array(testData.num_questions).fill(null),
       }))
-      .sort((a, b) => studentDisplayName(a).localeCompare(studentDisplayName(b)));
+      .sort((a, b) => studentSortKey(a).localeCompare(studentSortKey(b)));
     return { test: testData, students };
   },
 
@@ -232,7 +238,7 @@ export const api = {
     ]);
     const students = studsSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => studentDisplayName(a).localeCompare(studentDisplayName(b)));
+      .sort((a, b) => studentSortKey(a).localeCompare(studentSortKey(b)));
     const allResponseSnaps = await Promise.all(
       testsSnap.docs.map(d => getDocs(responsesRef(classId, d.id)))
     );
